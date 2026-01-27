@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from ha_mcp_server.models import (
+from home_assistant_mcp.models import (
     ApiStatus,
     ConfigEntry,
     EntityState,

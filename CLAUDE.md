@@ -15,12 +15,14 @@ This is an MCP (Model Context Protocol) server that provides tools to interact w
 This project includes the official Anthropic mcp-builder skill, which provides comprehensive guidance for developing MCP servers.
 
 **Key References:**
+
 - `reference/python_mcp_server.md` - Complete guide for Python MCP server development (⭐ most relevant for this project)
 - `reference/mcp_best_practices.md` - Best practices for MCP server design
 - `reference/evaluation.md` - Evaluation methodologies for MCP implementations
 - `reference/node_mcp_server.md` - Node.js/TypeScript MCP guide
 
 **Utility Scripts:**
+
 - `scripts/evaluation.py` - Script to evaluate MCP server implementation quality
 - `scripts/connections.py` - Utilities for managing MCP connections
 
@@ -108,25 +110,28 @@ When working with code in this repository, you MUST follow these principles:
 ## Commands
 
 ### Development Setup
+
 ```bash
 uv sync              # Install dependencies
 uv sync --group dev  # Install with dev dependencies
 ```
 
 ### Running the Server
+
 ```bash
-uv run ha-mcp-server                    # Run MCP server
-uv run python -m ha_mcp_server.server   # Alternative
+uv run home-assistant-mcp                    # Run MCP server
+uv run python -m home_assistant_mcp.server   # Alternative
 ```
 
 ### Testing
+
 ```bash
 uv run pytest                           # Run all tests
 uv run pytest tests/unit                # Run unit tests only
 uv run pytest tests/integration         # Run integration tests only
 uv run pytest tests/unit/test_client.py # Run single test file
 uv run pytest -k "test_name"            # Run tests matching pattern
-uv run pytest --cov=src/ha_mcp_server --cov-report=html  # With coverage
+uv run pytest --cov=src/home_assistant_mcp --cov-report=html  # With coverage
 ```
 
 ---
@@ -139,7 +144,7 @@ The project follows a **hybrid structure** that separates by test type and mirro
 
 ```
 src/
-  ha_mcp_server/
+  home_assistant_mcp/
     client.py
     server.py
     config.py
@@ -162,7 +167,7 @@ tests/
 
 1. **Test files**: Use the `test_*.py` pattern.
 2. **Test functions**: Prefix with `test_*`.
-3. **Direct relationship**: `src/ha_mcp_server/client.py` → `tests/unit/test_client.py`.
+3. **Direct relationship**: `src/home_assistant_mcp/client.py` → `tests/unit/test_client.py`.
 
 ### Test Classification
 
@@ -191,11 +196,13 @@ tests/
 ### Isolation and Dependencies
 
 **Unit tests**:
+
 - Cannot depend on execution order.
 - Cannot depend on shared state.
 - Should not perform real I/O.
 
 **Integration and e2e tests**:
+
 - Must leave environment clean (clean DB, reset queues, delete temp files).
 - Controlled I/O is allowed.
 
@@ -217,7 +224,7 @@ def test_full_checkout_flow():
     ...
 ```
 
-3. **Configuration**: Declare markers in `pytest.ini` or `pyproject.toml`:
+1. **Configuration**: Declare markers in `pytest.ini` or `pyproject.toml`:
 
 ```ini
 [pytest]
@@ -226,7 +233,7 @@ markers =
     e2e: end-to-end tests (complete flows and heavy environments)
 ```
 
-4. **Execution commands**:
+1. **Execution commands**:
 
 ```bash
 # All unit tests
@@ -314,6 +321,7 @@ uv run pytest
 ```
 
 **Use cases**:
+
 - Verify code works correctly.
 - Before commits or PRs.
 - During development to validate changes.
@@ -331,30 +339,32 @@ uv add <package_name>
 ```
 
 Example:
+
 ```bash
 uv add httpx
 ```
 
-2. **Add development dependency**:
+1. **Add development dependency**:
 
 ```bash
 uv add --dev <package_name>
 ```
 
 Example:
+
 ```bash
 uv add --dev pytest
 ```
 
-3. **Sync environment** after manual changes to `pyproject.toml`:
+1. **Sync environment** after manual changes to `pyproject.toml`:
 
 ```bash
 uv sync
 ```
 
-4. **Update README.md** if necessary with information about the new dependency.
+1. **Update README.md** if necessary with information about the new dependency.
 
-5. **Update documentation** in `docs/` (if using mkdocs) with information about the new component.
+2. **Update documentation** in `docs/` (if using mkdocs) with information about the new component.
 
 ### 3. Create Component
 
@@ -375,37 +385,39 @@ touch src/<layer>/<component_name>.py
 ```
 
 Example:
+
 ```bash
-touch src/ha_mcp_server/new_service.py
+touch src/home_assistant_mcp/new_service.py
 ```
 
-3. **Define the class** ensuring:
+1. **Define the class** ensuring:
    - Single Responsibility Principle (SRP)
    - Documentation (Google-style docstrings) for class and methods
    - Strict type hints
 
-4. **Create the corresponding test file**:
+2. **Create the corresponding test file**:
 
 ```bash
 touch tests/unit/<layer>/test_<component_name>.py
 ```
 
 Example:
+
 ```bash
 touch tests/unit/test_new_service.py
 ```
 
-5. **Implement tests** covering success and error cases.
+1. **Implement tests** covering success and error cases.
 
-6. **Run tests** to verify:
+2. **Run tests** to verify:
 
 ```bash
 uv run pytest
 ```
 
-7. **Update README.md** if necessary.
+1. **Update README.md** if necessary.
 
-8. **Update documentation** in `docs/` (if using mkdocs).
+2. **Update documentation** in `docs/` (if using mkdocs).
 
 ### 4. Sync Artifacts
 
@@ -419,7 +431,7 @@ uv run pytest
 mkdir -p planning
 ```
 
-2. **Copy artifacts** to a folder with timestamp:
+1. **Copy artifacts** to a folder with timestamp:
 
 ```bash
 UUID="<session-uuid>"
@@ -439,10 +451,12 @@ echo "Artifacts copied to $DEST_DIR"
 ## Configuration
 
 Required environment variables:
+
 - `HA_URL` - Home Assistant URL (e.g., `http://192.168.1.100:8123`)
 - `HA_TOKEN` - Long-lived access token from Home Assistant
 
 Optional:
+
 - `HA_VERIFY_SSL` - SSL verification (default: `true`)
 - `HA_TIMEOUT` - Request timeout in seconds (default: `30`)
 

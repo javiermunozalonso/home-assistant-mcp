@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from ha_mcp_server.client import HomeAssistantClient
-from ha_mcp_server.config import HomeAssistantConfig
-from ha_mcp_server.models import (
+from home_assistant_mcp.client import HomeAssistantClient
+from home_assistant_mcp.config import HomeAssistantConfig
+from home_assistant_mcp.models import (
     ApiStatus,
     ConfigEntry,
     Dashboard,
@@ -17,8 +17,8 @@ from ha_mcp_server.models import (
     ServiceCallResponse,
     ServiceDomain,
 )
-from ha_mcp_server.server import call_tool, get_client, list_tools, _client, _config
-import ha_mcp_server.server as server_module
+from home_assistant_mcp.server import call_tool, get_client, list_tools, _client, _config
+import home_assistant_mcp.server as server_module
 
 
 @pytest.fixture(autouse=True)
@@ -100,7 +100,7 @@ class TestCallTool:
             with patch.object(server_module, "_client", mock_client):
                 with patch.object(server_module, "_config", ha_config):
                     # Need to also patch get_client to return our mock
-                    with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+                    with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
                         result = await call_tool("ha_health_check", {})
 
             assert len(result) == 1
@@ -112,7 +112,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.get_config = AsyncMock(return_value=ConfigEntry(**mock_config))
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_get_config", {})
 
         assert len(result) == 1
@@ -127,7 +127,7 @@ class TestCallTool:
             return_value=[EntityState(**state) for state in mock_entity_states]
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_list_entities", {})
 
         assert len(result) == 1
@@ -146,7 +146,7 @@ class TestCallTool:
         ]
         mock_client.get_entities_by_domain = AsyncMock(return_value=light_states)
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_list_entities", {"domain": "light"})
 
         assert len(result) == 1
@@ -158,7 +158,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.get_state = AsyncMock(return_value=EntityState(**mock_entity_state))
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_get_entity_state", {"entity_id": "light.living_room"})
 
         assert len(result) == 1
@@ -174,7 +174,7 @@ class TestCallTool:
             return_value=[ServiceDomain(**svc) for svc in mock_services]
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_list_services", {})
 
         assert len(result) == 1
@@ -191,7 +191,7 @@ class TestCallTool:
             )
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool(
                 "ha_call_service",
                 {
@@ -215,7 +215,7 @@ class TestCallTool:
             )
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool(
                 "ha_turn_on",
                 {"entity_id": "light.living_room", "brightness": 255},
@@ -237,7 +237,7 @@ class TestCallTool:
             )
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_turn_off", {"entity_id": "light.living_room"})
 
         assert len(result) == 1
@@ -254,7 +254,7 @@ class TestCallTool:
             )
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_toggle", {"entity_id": "light.living_room"})
 
         assert len(result) == 1
@@ -266,7 +266,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.fire_event = AsyncMock(return_value=True)
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool(
                 "ha_fire_event",
                 {"event_type": "custom_event", "event_data": {"key": "value"}},
@@ -280,7 +280,7 @@ class TestCallTool:
         """Test handling unknown tool."""
         mock_client = AsyncMock(spec=HomeAssistantClient)
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("unknown_tool", {})
 
         assert len(result) == 1
@@ -289,14 +289,14 @@ class TestCallTool:
     @pytest.mark.asyncio
     async def test_error_handling(self, ha_config: HomeAssistantConfig):
         """Test error handling in tool calls."""
-        from ha_mcp_server.client import HomeAssistantError
+        from home_assistant_mcp.client import HomeAssistantError
 
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.get_state = AsyncMock(
             side_effect=HomeAssistantError("Entity not found", status_code=404)
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_get_entity_state", {"entity_id": "invalid.entity"})
 
         assert len(result) == 1
@@ -310,7 +310,7 @@ class TestCallTool:
             return_value=ServiceCallResponse(success=True, changed_states=[])
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             await call_tool(
                 "ha_call_service",
                 {
@@ -332,7 +332,7 @@ class TestCallTool:
             return_value=[Dashboard(**dashboard) for dashboard in mock_dashboards_list]
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_list_dashboards", {})
 
         assert len(result) == 1
@@ -348,7 +348,7 @@ class TestCallTool:
             return_value=DashboardConfig(**mock_dashboard_config)
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_get_dashboard", {"url_path": "test-dashboard"})
 
         assert len(result) == 1
@@ -364,7 +364,7 @@ class TestCallTool:
             return_value=DashboardConfig(**mock_dashboard_config)
         )
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_get_dashboard", {})
 
         assert len(result) == 1
@@ -376,7 +376,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.create_dashboard = AsyncMock(return_value=Dashboard(**mock_dashboard))
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool(
                 "ha_create_dashboard",
                 {
@@ -401,7 +401,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.update_dashboard = AsyncMock(return_value=Dashboard(**updated_dashboard))
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool(
                 "ha_update_dashboard",
                 {"dashboard_id": "test_dashboard", "title": "Updated Dashboard"},
@@ -418,7 +418,7 @@ class TestCallTool:
         mock_client = AsyncMock(spec=HomeAssistantClient)
         mock_client.delete_dashboard = AsyncMock(return_value=True)
 
-        with patch("ha_mcp_server.server.get_client", return_value=mock_client):
+        with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
             result = await call_tool("ha_delete_dashboard", {"dashboard_id": "test_dashboard"})
 
         assert len(result) == 1

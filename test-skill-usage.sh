@@ -30,7 +30,7 @@ echo -e "\n${GREEN}✓ Información de nomenclatura encontrada${NC}\n"
 # Test 3: Check if our current tool names follow best practices
 echo -e "${YELLOW}3. Verificando nombres de nuestras herramientas actuales:${NC}\n"
 echo "Herramientas en nuestro servidor:"
-grep -E "name=\"ha_" src/ha_mcp_server/server.py | head -10 | sed 's/.*name="\([^"]*\)".*/  - \1/'
+grep -E "name=\"ha_" src/home_assistant_mcp/server.py | head -10 | sed 's/.*name="\([^"]*\)".*/  - \1/'
 echo -e "\n${GREEN}✓ Nuestras herramientas siguen el patrón {service}_{action}${NC}\n"
 
 # Test 4: Check Python patterns
@@ -42,7 +42,7 @@ echo -e "\n${GREEN}✓ Patrones de validación disponibles${NC}\n"
 echo -e "${YELLOW}5. Recomendaciones de servidor MCP:${NC}\n"
 grep -A 5 "Server Naming" .claude/skills/mcp-builder/reference/mcp_best_practices.md | head -10
 echo ""
-echo "Nuestro servidor se llama: $(grep 'Server(' src/ha_mcp_server/server.py | head -1 | sed 's/.*Server("\([^"]*\)".*/\1/')"
+echo "Nuestro servidor se llama: $(grep 'Server(' src/home_assistant_mcp/server.py | head -1 | sed 's/.*Server("\([^"]*\)".*/\1/')"
 echo -e "\n${GREEN}✓ Comparación disponible${NC}\n"
 
 # Test 6: Check error handling recommendations

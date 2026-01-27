@@ -3,8 +3,8 @@
 
 import asyncio
 import sys
-from ha_mcp_server.client import HomeAssistantClient
-from ha_mcp_server.config import load_config
+from home_assistant_mcp.client import HomeAssistantClient
+from home_assistant_mcp.config import load_config
 
 
 async def list_dashboards():

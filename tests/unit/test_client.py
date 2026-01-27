@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pytest_httpx import HTTPXMock
 
-from ha_mcp_server.client import HomeAssistantClient, HomeAssistantError
-from ha_mcp_server.config import HomeAssistantConfig
+from home_assistant_mcp.client import HomeAssistantClient, HomeAssistantError
+from home_assistant_mcp.config import HomeAssistantConfig
 
 
 class TestHomeAssistantClient:
@@ -355,7 +355,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.list_dashboards()
                 assert len(result) == 2
@@ -375,7 +375,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.get_dashboard_config()
                 assert result.title == "Test Dashboard"
@@ -394,7 +394,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.get_dashboard_config(url_path="test-dashboard")
                 assert result.title == "Test Dashboard"
@@ -415,7 +415,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.create_dashboard(
                     url_path="test-dashboard",
@@ -444,7 +444,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.update_dashboard("test_dashboard", title="Updated Dashboard")
                 assert result.title == "Updated Dashboard"
@@ -462,7 +462,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.delete_dashboard("test_dashboard")
                 assert result is True
@@ -485,7 +485,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             async with client:
                 result = await client.save_dashboard_config(config, url_path="test-dashboard")
                 assert result is True
@@ -501,7 +501,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             with pytest.raises(HomeAssistantError) as exc_info:
                 async with client:
                     await client.list_dashboards()
@@ -524,7 +524,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws):
             with pytest.raises(HomeAssistantError) as exc_info:
                 async with client:
                     await client.list_dashboards()
@@ -543,7 +543,7 @@ class TestHomeAssistantClient:
         ])
         mock_ws.send = AsyncMock()
 
-        with patch("ha_mcp_server.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws) as mock_connect:
+        with patch("home_assistant_mcp.client.websockets.connect", new_callable=AsyncMock, return_value=mock_ws) as mock_connect:
             async with client:
                 await client.list_dashboards()
                 await client.list_dashboards()

@@ -2,8 +2,8 @@
 
 import pytest
 
-from ha_mcp_server.config import HomeAssistantConfig
-from ha_mcp_server.client import HomeAssistantClient
+from home_assistant_mcp.config import HomeAssistantConfig
+from home_assistant_mcp.client import HomeAssistantClient
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@ Se ha creado exitosamente un dashboard para controlar las luces del salón con l
 
 - **Nombre**: Luces del Salón
 - **ID**: salon_lights
-- **URL**: http://192.168.88.114:8123/salon-lights
+- **URL**: <http://192.168.88.114:8123/salon-lights>
 - **Icono**: mdi:lightbulb-group
 - **Visible en sidebar**: Sí
 
@@ -43,6 +43,7 @@ uv run python create_salon_dashboard.py
 ```
 
 Este script:
+
 - Detecta automáticamente el área del salón
 - Encuentra todas las luces en esa área
 - Crea/actualiza el dashboard con tarjetas para cada luz
@@ -68,6 +69,7 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
 ### Herramientas Disponibles
 
 1. **ha_list_dashboards**: Lista todos los dashboards
+
    ```json
    {
      "name": "ha_list_dashboards",
@@ -76,6 +78,7 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
    ```
 
 2. **ha_get_dashboard**: Obtiene configuración de un dashboard
+
    ```json
    {
      "name": "ha_get_dashboard",
@@ -86,6 +89,7 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
    ```
 
 3. **ha_create_dashboard**: Crea un nuevo dashboard
+
    ```json
    {
      "name": "ha_create_dashboard",
@@ -99,6 +103,7 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
    ```
 
 4. **ha_update_dashboard**: Actualiza un dashboard existente
+
    ```json
    {
      "name": "ha_update_dashboard",
@@ -110,6 +115,7 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
    ```
 
 5. **ha_delete_dashboard**: Elimina un dashboard
+
    ```json
    {
      "name": "ha_delete_dashboard",
@@ -122,8 +128,8 @@ Las funcionalidades de dashboard están disponibles como herramientas MCP:
 ## 💻 Uso Programático
 
 ```python
-from ha_mcp_server.client import HomeAssistantClient
-from ha_mcp_server.config import load_config
+from home_assistant_mcp.client import HomeAssistantClient
+from home_assistant_mcp.config import load_config
 
 async def example():
     config = load_config()

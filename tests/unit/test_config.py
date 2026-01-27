@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ha_mcp_server.config import HomeAssistantConfig, load_config
+from home_assistant_mcp.config import HomeAssistantConfig, load_config
 
 
 class TestHomeAssistantConfig:

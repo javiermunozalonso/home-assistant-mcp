@@ -26,27 +26,27 @@ Las siguientes reglas **DEBEN** aplicarse en todo momento al trabajar con códig
 
 ### Gestión de Dependencias y Entorno
 
-8. **Ejecutar comandos**: Usar siempre `uv` para lanzar ejecuciones.
+1. **Ejecutar comandos**: Usar siempre `uv` para lanzar ejecuciones.
 
-9. **Agregar dependencias**: Usar `uv add <package>` para dependencias de producción.
+2. **Agregar dependencias**: Usar `uv add <package>` para dependencias de producción.
 
-10. **Dependencias de desarrollo**: Usar `uv add --dev <package>` para dependencias de desarrollo (testing, linting, etc.).
+3. **Dependencias de desarrollo**: Usar `uv add --dev <package>` para dependencias de desarrollo (testing, linting, etc.).
 
 ### Testing
 
-11. **Tests obligatorios**: Siempre generar tests asociados a las funcionalidades desarrolladas.
+1. **Tests obligatorios**: Siempre generar tests asociados a las funcionalidades desarrolladas.
 
-12. **Framework de testing**: Usar siempre `pytest` para la ejecución de tests.
+2. **Framework de testing**: Usar siempre `pytest` para la ejecución de tests.
 
-13. **Estructura de tests**: Los tests deben respetar la estructura original de la funcionalidad, distribuidos por archivos siguiendo la organización del proyecto (ver sección Tests más abajo).
+3. **Estructura de tests**: Los tests deben respetar la estructura original de la funcionalidad, distribuidos por archivos siguiendo la organización del proyecto (ver sección Tests más abajo).
 
 ### Documentación
 
-14. **Documentación de código**: Al crear una función, generar documentación asociada. Si es una clase, documentar la clase y cada método siguiendo el **estándar de Google Style**.
+1. **Documentación de código**: Al crear una función, generar documentación asociada. Si es una clase, documentar la clase y cada método siguiendo el **estándar de Google Style**.
 
 ### Organización de Clases
 
-15. **Un fichero por clase**: Las clases deben tener sus ficheros individuales. No se pueden tener varias clases en el mismo fichero. Los nombres deben estar en formato `snake_case`.
+1. **Un fichero por clase**: Las clases deben tener sus ficheros individuales. No se pueden tener varias clases en el mismo fichero. Los nombres deben estar en formato `snake_case`.
 
 ---
 
@@ -60,7 +60,7 @@ Las siguientes reglas **DEBEN** aplicarse en todo momento al trabajar con códig
 
 ### Sincronización de Artefactos
 
-3. **Artefactos internos**: Al crear artefacts internos (tasks, implementation plans), usar el workflow de sincronización (ver `sync-artifacts` más abajo) para mantener un histórico en la carpeta `planning/`.
+1. **Artefactos internos**: Al crear artefacts internos (tasks, implementation plans), usar el workflow de sincronización (ver `sync-artifacts` más abajo) para mantener un histórico en la carpeta `planning/`.
 
 ---
 
@@ -86,7 +86,7 @@ tests/
 
 ```
 src/
-  ha_mcp_server/
+  home_assistant_mcp/
     client.py
     server.py
     config.py
@@ -134,11 +134,13 @@ tests/
 ### Aislamiento y Dependencias
 
 **Tests unitarios**:
+
 - No pueden depender del orden de ejecución.
 - No pueden depender de estado compartido.
 - No deben realizar I/O real.
 
 **Tests de integración y e2e**:
+
 - Deben dejar el entorno limpio (limpiar BBDD, resetear colas, borrar temporales).
 - Se permite I/O controlado.
 
@@ -160,7 +162,7 @@ def test_full_checkout_flow():
     ...
 ```
 
-3. **Configuración**: Declarar markers en `pytest.ini` o `pyproject.toml`:
+1. **Configuración**: Declarar markers en `pytest.ini` o `pyproject.toml`:
 
 ```ini
 [pytest]
@@ -169,7 +171,7 @@ markers =
     e2e: tests end-to-end (flujos completos y entornos pesados)
 ```
 
-4. **Comandos de ejecución**:
+1. **Comandos de ejecución**:
 
 ```bash
 # Todos los unitarios
@@ -238,6 +240,7 @@ uv run pytest
 ```
 
 **Casos de uso**:
+
 - Verificar que el código funciona correctamente.
 - Antes de hacer commits o PRs.
 - Durante el desarrollo para validar cambios.
@@ -257,30 +260,32 @@ uv add <package_name>
 ```
 
 Ejemplo:
+
 ```bash
 uv add requests
 ```
 
-2. **Añadir dependencia de desarrollo**:
+1. **Añadir dependencia de desarrollo**:
 
 ```bash
 uv add --dev <package_name>
 ```
 
 Ejemplo:
+
 ```bash
 uv add --dev pytest
 ```
 
-3. **Sincronizar entorno** tras cambios manuales en `pyproject.toml`:
+1. **Sincronizar entorno** tras cambios manuales en `pyproject.toml`:
 
 ```bash
 uv sync
 ```
 
-4. **Actualizar README.md** si es necesario con información de la nueva dependencia.
+1. **Actualizar README.md** si es necesario con información de la nueva dependencia.
 
-5. **Actualizar documentación** en `docs/` (si usa mkdocs) con información del nuevo componente.
+2. **Actualizar documentación** en `docs/` (si usa mkdocs) con información del nuevo componente.
 
 ---
 
@@ -303,37 +308,39 @@ touch src/<capa>/<nombre_componente>.py
 ```
 
 Ejemplo:
+
 ```bash
 touch src/domain/new_entity.py
 ```
 
-3. **Definir la clase** asegurando:
+1. **Definir la clase** asegurando:
    - Principio de Responsabilidad Única (SRP)
    - Documentación (docstrings estilo Google) para clase y métodos
    - Type hints estrictos
 
-4. **Crear el fichero de test** correspondiente:
+2. **Crear el fichero de test** correspondiente:
 
 ```bash
 touch tests/unit/<capa>/test_<nombre_componente>.py
 ```
 
 Ejemplo:
+
 ```bash
 touch tests/unit/domain/test_new_entity.py
 ```
 
-5. **Implementar tests** cubriendo casos de éxito y error.
+1. **Implementar tests** cubriendo casos de éxito y error.
 
-6. **Lanzar tests** para verificar:
+2. **Lanzar tests** para verificar:
 
 ```bash
 uv run pytest
 ```
 
-7. **Actualizar README.md** si es necesario.
+1. **Actualizar README.md** si es necesario.
 
-8. **Actualizar documentación** en `docs/` (si usa mkdocs).
+2. **Actualizar documentación** en `docs/` (si usa mkdocs).
 
 ---
 
@@ -349,7 +356,7 @@ uv run pytest
 mkdir -p planning
 ```
 
-2. **Copiar artefactos** a una carpeta con timestamp:
+1. **Copiar artefactos** a una carpeta con timestamp:
 
 ```bash
 UUID="<session-uuid>"
@@ -391,7 +398,7 @@ uv run pytest tests/integration -m integration
 uv run pytest --cov=src/<proyecto> --cov-report=html
 
 # Ejecutar el servidor MCP
-uv run ha-mcp-server
+uv run home-assistant-mcp
 ```
 
 ---

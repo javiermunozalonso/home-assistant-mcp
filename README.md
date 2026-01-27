@@ -43,11 +43,13 @@ pip install -e .
 ## Configuration
 
 1. Copy the example environment file:
+
    ```bash
    cp .env.example .env
    ```
 
 2. Edit `.env` with your Home Assistant details:
+
    ```env
    HA_URL=http://your-home-assistant:8123
    HA_TOKEN=your_long_lived_access_token
@@ -67,10 +69,10 @@ pip install -e .
 
 ```bash
 # Using uv
-uv run ha-mcp-server
+uv run home-assistant-mcp
 
 # Or directly
-uv run python -m ha_mcp_server.server
+uv run python -m home_assistant_mcp.server
 ```
 
 ### Configuring with Claude Desktop
@@ -82,7 +84,7 @@ Add to your Claude Desktop configuration (`~/.config/claude/claude_desktop_confi
   "mcpServers": {
     "home-assistant": {
       "command": "uv",
-      "args": ["--directory", "/path/to/ha_connection", "run", "ha-mcp-server"],
+      "args": ["--directory", "/path/to/ha_connection", "run", "home-assistant-mcp"],
       "env": {
         "HA_URL": "http://your-home-assistant:8123",
         "HA_TOKEN": "your_long_lived_access_token"
@@ -130,7 +132,7 @@ uv run pytest
 ### Run with coverage
 
 ```bash
-uv run pytest --cov=src/ha_mcp_server --cov-report=html
+uv run pytest --cov=src/home_assistant_mcp --cov-report=html
 ```
 
 ### Run only unit tests
@@ -165,6 +167,7 @@ This project includes the official Anthropic mcp-builder skill for enhanced MCP 
 ```
 
 **Available Resources:**
+
 - Python MCP Server Guide: `.claude/skills/mcp-builder/reference/python_mcp_server.md`
 - Best Practices: `.claude/skills/mcp-builder/reference/mcp_best_practices.md`
 - Evaluation Tools: `.claude/skills/mcp-builder/scripts/evaluation.py`
@@ -179,7 +182,7 @@ ha_connection/
 │   └── skills/
 │       └── mcp-builder/   # MCP development guidance skill
 ├── src/
-│   └── ha_mcp_server/
+│   └── home_assistant_mcp/
 │       ├── __init__.py
 │       ├── client.py      # Home Assistant REST API client
 │       ├── config.py      # Configuration management
