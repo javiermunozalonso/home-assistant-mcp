@@ -494,6 +494,7 @@ $RECYCLE.BIN/
 
 # Environment and secrets
 config.sh
+temp/
 .claude/skills/**/node_modules/
 .claude/skills/**/__pycache__/
 .claude/skills/**/*.pyc
