@@ -145,10 +145,39 @@ uv run pytest tests/unit
 uv run pytest tests/integration
 ```
 
+## Development Tools
+
+### MCP-Builder Skill
+
+This project includes the official Anthropic mcp-builder skill for enhanced MCP server development guidance.
+
+**Installation:**
+
+```bash
+# Install or update the skill
+./install-mcp-builder-skill.sh
+
+# Update to latest version
+./install-mcp-builder-skill.sh --update
+
+# Install with Python dependencies for evaluation scripts
+./install-mcp-builder-skill.sh --install-deps
+```
+
+**Available Resources:**
+- Python MCP Server Guide: `.claude/skills/mcp-builder/reference/python_mcp_server.md`
+- Best Practices: `.claude/skills/mcp-builder/reference/mcp_best_practices.md`
+- Evaluation Tools: `.claude/skills/mcp-builder/scripts/evaluation.py`
+
+The skill is automatically available when using Claude Code for development.
+
 ## Project Structure
 
 ```
 ha_connection/
+├── .claude/
+│   └── skills/
+│       └── mcp-builder/   # MCP development guidance skill
 ├── src/
 │   └── ha_mcp_server/
 │       ├── __init__.py
@@ -165,6 +194,7 @@ ha_connection/
 │   └── integration/       # Integration tests
 │       └── test_server.py
 ├── .env.example           # Example environment configuration
+├── install-mcp-builder-skill.sh  # Skill installation script
 ├── pyproject.toml         # Project configuration
 └── README.md
 ```

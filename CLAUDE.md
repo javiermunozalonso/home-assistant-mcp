@@ -6,6 +6,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an MCP (Model Context Protocol) server that provides tools to interact with Home Assistant through its REST API. It allows AI assistants to control smart home devices, query states, and call services.
 
+## Available Skills
+
+### mcp-builder
+
+**Location**: `.claude/skills/mcp-builder`
+
+This project includes the official Anthropic mcp-builder skill, which provides comprehensive guidance for developing MCP servers.
+
+**Key References:**
+- `reference/python_mcp_server.md` - Complete guide for Python MCP server development (⭐ most relevant for this project)
+- `reference/mcp_best_practices.md` - Best practices for MCP server design
+- `reference/evaluation.md` - Evaluation methodologies for MCP implementations
+- `reference/node_mcp_server.md` - Node.js/TypeScript MCP guide
+
+**Utility Scripts:**
+- `scripts/evaluation.py` - Script to evaluate MCP server implementation quality
+- `scripts/connections.py` - Utilities for managing MCP connections
+
+**Installation & Updates:**
+
+To install or update the skill:
+
+```bash
+./install-mcp-builder-skill.sh
+```
+
+To update with latest changes from Anthropic:
+
+```bash
+./install-mcp-builder-skill.sh --update
+```
+
+To install Python dependencies for evaluation scripts:
+
+```bash
+./install-mcp-builder-skill.sh --install-deps
+```
+
+**Usage:**
+
+The skill is automatically available to Claude Code. You can reference it when working on MCP server improvements, or explicitly invoke evaluation scripts:
+
+```bash
+python .claude/skills/mcp-builder/scripts/evaluation.py
+```
+
 ---
 
 ## Development Guidelines
