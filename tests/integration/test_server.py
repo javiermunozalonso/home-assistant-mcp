@@ -17,7 +17,7 @@ from home_assistant_mcp.models import (
     ServiceCallResponse,
     ServiceDomain,
 )
-from home_assistant_mcp.server import call_tool, get_client, list_tools, _client, _config
+from home_assistant_mcp.server import call_tool, list_tools
 import home_assistant_mcp.server as server_module
 
 
@@ -424,3 +424,71 @@ class TestCallTool:
         assert len(result) == 1
         assert "deleted successfully" in result[0].text
         assert "test_dashboard" in result[0].text
+
+    @pytest.mark.asyncio
+    async def test_error_handling_key_error(self, ha_config: HomeAssistantConfig):
+        """Test handling missing arguments (KeyError)."""
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        
+        # Simulate a tool that raises KeyError for missing argument
+        async def mock_tool_execution(client, args):
+            raise KeyError("required_arg")
+
+        with patch("home_assistant_mcp.server.TOOLS_MAP", {"mock_tool": mock_tool_execution}):
+            with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
+                result = await call_tool("mock_tool", {})
+        
+        assert len(result) == 1
+        assert "Missing required argument" in result[0].text
+        assert "required_arg" in result[0].text
+
+    @pytest.mark.asyncio
+    async def test_error_handling_type_error(self, ha_config: HomeAssistantConfig):
+        """Test handling invalid argument types (TypeError)."""
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        
+        # Simulate a tool that raises TypeError
+        async def mock_tool_execution(client, args):
+            raise TypeError("invalid type")
+
+        with patch("home_assistant_mcp.server.TOOLS_MAP", {"mock_tool": mock_tool_execution}):
+            with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
+                result = await call_tool("mock_tool", {})
+        
+        assert len(result) == 1
+        assert "Invalid argument type" in result[0].text
+        assert "invalid type" in result[0].text
+
+    @pytest.mark.asyncio
+    async def test_error_handling_timeout(self, ha_config: HomeAssistantConfig):
+        """Test handling request timeouts (httpx.TimeoutException)."""
+        import httpx
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        
+        # Simulate a tool that raises TimeoutException
+        async def mock_tool_execution(client, args):
+            raise httpx.TimeoutException("Timeout")
+
+        with patch("home_assistant_mcp.server.TOOLS_MAP", {"mock_tool": mock_tool_execution}):
+            with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
+                result = await call_tool("mock_tool", {})
+        
+        assert len(result) == 1
+        assert "Request timed out" in result[0].text
+
+    @pytest.mark.asyncio
+    async def test_error_handling_unexpected_exception(self, ha_config: HomeAssistantConfig):
+        """Test handling unexpected exceptions."""
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        
+        # Simulate a tool that raises a generic Exception
+        async def mock_tool_execution(client, args):
+            raise Exception("Unexpected error")
+
+        with patch("home_assistant_mcp.server.TOOLS_MAP", {"mock_tool": mock_tool_execution}):
+            with patch("home_assistant_mcp.server.get_client", return_value=mock_client):
+                result = await call_tool("mock_tool", {})
+        
+        assert len(result) == 1
+        assert "Internal error" in result[0].text
+        assert "Unexpected error" in result[0].text

@@ -2,6 +2,8 @@
 
 from typing import Any
 
+import logging
+import httpx
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
@@ -16,6 +18,13 @@ server = Server("home-assistant-mcp")
 # Global client instance (initialized when server starts)
 _client: HomeAssistantClient | None = None
 _config: HomeAssistantConfig | None = None
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("home-assistant-mcp")
 
 
 def get_client() -> HomeAssistantClient:
@@ -37,17 +46,33 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls for Home Assistant operations."""
-    client = get_client()
-
-    if name not in TOOLS_MAP:
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
-
     try:
+        client = get_client()
+
+        if name not in TOOLS_MAP:
+            logger.warning(f"Unknown tool requested: {name}")
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+        logger.info(f"Executing tool: {name}")
+        logger.debug(f"Tool arguments: {arguments}")
+        
         return await TOOLS_MAP[name](client, arguments)
+
+    except KeyError as e:
+        logger.error(f"Missing required argument: {e}")
+        return [TextContent(type="text", text=f"Missing required argument: {e}")]
+    except TypeError as e:
+        logger.error(f"Invalid argument type: {e}")
+        return [TextContent(type="text", text=f"Invalid argument type: {e}")]
+    except httpx.TimeoutException:
+        logger.error("Request timed out")
+        return [TextContent(type="text", text="Request timed out")]
     except HomeAssistantError as e:
+        logger.error(f"Home Assistant error: {e}")
         return [TextContent(type="text", text=f"Home Assistant error: {e}")]
     except Exception as e:
-        return [TextContent(type="text", text=f"Error: {type(e).__name__}: {e}")]
+        logger.exception(f"Unexpected error executing {name}")
+        return [TextContent(type="text", text=f"Internal error: {e}")]
 
 
 async def run_server() -> None:
