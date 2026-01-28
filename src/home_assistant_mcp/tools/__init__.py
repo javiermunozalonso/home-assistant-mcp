@@ -1,0 +1,51 @@
+
+from . import (
+    ha_health_check,
+    ha_get_config,
+    ha_list_entities,
+    ha_get_entity_state,
+    ha_list_services,
+    ha_call_service,
+    ha_turn_on,
+    ha_turn_off,
+    ha_toggle,
+    ha_get_history,
+    ha_fire_event,
+    ha_list_areas,
+    ha_get_area_entities,
+    ha_get_area_devices,
+    ha_get_entity_area,
+    ha_render_template,
+    ha_list_dashboards,
+    ha_get_dashboard,
+    ha_create_dashboard,
+    ha_update_dashboard,
+    ha_delete_dashboard,
+)
+
+ALL_TOOL_MODULES = [
+    ha_health_check,
+    ha_get_config,
+    ha_list_entities,
+    ha_get_entity_state,
+    ha_list_services,
+    ha_call_service,
+    ha_turn_on,
+    ha_turn_off,
+    ha_toggle,
+    ha_get_history,
+    ha_fire_event,
+    ha_list_areas,
+    ha_get_area_entities,
+    ha_get_area_devices,
+    ha_get_entity_area,
+    ha_render_template,
+    ha_list_dashboards,
+    ha_get_dashboard,
+    ha_create_dashboard,
+    ha_update_dashboard,
+    ha_delete_dashboard,
+]
+
+TOOLS_LIST = [m.TOOL_DEF for m in ALL_TOOL_MODULES]
+TOOLS_MAP = {m.TOOL_DEF.name: m.execute for m in ALL_TOOL_MODULES}
