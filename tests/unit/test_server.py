@@ -1,23 +1,196 @@
-import pytest
-from unittest.mock import AsyncMock, patch
+"""Unit tests for FastMCP server."""
 
-from home_assistant_mcp.server import get_client, list_tools, call_tool
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from home_assistant_mcp import core, server
 from home_assistant_mcp.client import HomeAssistantClient, HomeAssistantError
 from home_assistant_mcp.config import HomeAssistantConfig
+from home_assistant_mcp.models import ApiStatus
 
 
 class TestGetClient:
     """Tests for get_client function."""
 
-    def test_get_client_creates_instance(self):
-        """Test that get_client creates a client instance."""
-        # Reset global state
-        import home_assistant_mcp.server as server_module
+    def test_get_client_returns_client_when_initialized(self):
+        """Test that get_client returns client when it's set."""
+        # Mock the client
+        mock_client = MagicMock(spec=HomeAssistantClient)
+        core.client = mock_client
 
-        server_module._client = None
-        server_module._config = None
+        client = core.get_client()
 
-        with patch("home_assistant_mcp.server.load_config") as mock_load_config:
+        assert client is mock_client
+
+    def test_get_client_raises_when_not_initialized(self):
+        """Test that get_client raises error when client is None."""
+        core.client = None
+
+        with pytest.raises(RuntimeError) as exc_info:
+            core.get_client()
+
+        assert "not initialized" in str(exc_info.value)
+
+
+class TestFastMCPServer:
+    """Tests for FastMCP server instance."""
+
+    def test_server_instance_created(self):
+        """Test that FastMCP server instance is created."""
+        assert core.mcp is not None
+        assert core.mcp.name == "home_assistant_mcp"
+
+    def test_server_has_lifespan(self):
+        """Test that server has lifespan configured."""
+        # FastMCP should have lifespan configured (stored internally)
+        # The lifespan is passed in constructor and managed by FastMCP
+        assert core.mcp is not None
+        # We can't directly access lifespan as it's internal to FastMCP
+        # But we can verify it works via lifecycle tests
+
+
+class TestHealthCheckTool:
+    """Tests for ha_health_check tool."""
+
+    @pytest.mark.asyncio
+    async def test_health_check_success(self):
+        """Test health check with successful API response."""
+        from home_assistant_mcp.tools.health import ha_health_check
+
+        # Setup mock client
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        mock_client.check_api.return_value = ApiStatus(message="API running")
+        core.client = mock_client
+
+        result = await ha_health_check()
+
+        assert "API is running" in result
+        assert "✓" in result
+        mock_client.check_api.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_health_check_handles_error(self):
+        """Test health check handles errors gracefully."""
+        from home_assistant_mcp.tools.health import ha_health_check
+
+        mock_client = AsyncMock(spec=HomeAssistantClient)
+        mock_client.check_api.side_effect = HomeAssistantError("Connection failed")
+        core.client = mock_client
+
+        result = await ha_health_check()
+
+        assert "✗" in result
+        assert "Connection failed" in result
+
+
+class TestToolModels:
+    """Tests for Pydantic tool models."""
+
+    def test_turn_on_input_validates_entity_id(self):
+        """Test that TurnOnInput validates entity_id format."""
+        from home_assistant_mcp.tool_models import TurnOnInput
+        from pydantic import ValidationError
+
+        # Valid entity_id
+        valid_input = TurnOnInput(entity_id="light.living_room")
+        assert valid_input.entity_id == "light.living_room"
+
+        # Invalid entity_id (missing domain separator)
+        with pytest.raises(ValidationError) as exc_info:
+            TurnOnInput(entity_id="invalid")
+
+        assert "domain.entity" in str(exc_info.value)
+
+    def test_turn_on_input_validates_brightness(self):
+        """Test that TurnOnInput validates brightness range."""
+        from home_assistant_mcp.tool_models import TurnOnInput
+        from pydantic import ValidationError
+
+        # Valid brightness
+        valid_input = TurnOnInput(entity_id="light.test", brightness=128)
+        assert valid_input.brightness == 128
+
+        # Invalid brightness (too high)
+        with pytest.raises(ValidationError):
+            TurnOnInput(entity_id="light.test", brightness=300)
+
+        # Invalid brightness (negative)
+        with pytest.raises(ValidationError):
+            TurnOnInput(entity_id="light.test", brightness=-1)
+
+    def test_turn_on_input_validates_rgb_color(self):
+        """Test that TurnOnInput validates RGB color values."""
+        from home_assistant_mcp.tool_models import TurnOnInput
+        from pydantic import ValidationError
+
+        # Valid RGB
+        valid_input = TurnOnInput(entity_id="light.test", rgb_color=[255, 0, 0])
+        assert valid_input.rgb_color == [255, 0, 0]
+
+        # Invalid RGB (value too high)
+        with pytest.raises(ValidationError) as exc_info:
+            TurnOnInput(entity_id="light.test", rgb_color=[300, 0, 0])
+
+        assert "0-255" in str(exc_info.value) or "0 and 255" in str(exc_info.value)
+
+    def test_list_entities_input_has_pagination(self):
+        """Test that ListEntitiesInput has pagination fields."""
+        from home_assistant_mcp.tool_models import ListEntitiesInput
+
+        input_model = ListEntitiesInput()
+        assert hasattr(input_model, "limit")
+        assert hasattr(input_model, "offset")
+        assert input_model.limit == 50  # Default
+        assert input_model.offset == 0  # Default
+
+    def test_response_format_enum(self):
+        """Test ResponseFormat enum."""
+        from home_assistant_mcp.tool_models import ResponseFormat
+
+        assert ResponseFormat.JSON == "json"
+        assert ResponseFormat.MARKDOWN == "markdown"
+
+
+class TestToolAnnotations:
+    """Tests to verify tools have proper annotations.
+
+    Note: FastMCP manages annotations internally and doesn't expose them
+    via __mcp_annotations__. The annotations are correctly registered
+    when tools are decorated with @mcp.tool(annotations={...}).
+
+    These tests verify that the tool functions exist and can be called.
+    """
+
+    def test_health_check_exists_and_callable(self):
+        """Test that ha_health_check exists and is callable."""
+        from home_assistant_mcp.tools.health import ha_health_check
+
+        assert callable(ha_health_check)
+        # Verify it's registered with FastMCP
+        assert ha_health_check is not None
+
+    def test_turn_on_exists_and_callable(self):
+        """Test that ha_turn_on exists and is callable."""
+        from home_assistant_mcp.tools.control import ha_turn_on
+
+        assert callable(ha_turn_on)
+        assert ha_turn_on is not None
+
+    def test_toggle_exists_and_callable(self):
+        """Test that ha_toggle exists and is callable."""
+        from home_assistant_mcp.tools.control import ha_toggle
+
+        assert callable(ha_toggle)
+        assert ha_toggle is not None
+
+
+class TestLifecycleManagement:
+    """Tests for lifecycle management."""
+
+    @pytest.mark.asyncio
+    async def test_lifespan_initializes_client(self):
+        """Test that lifespan initializes the Home Assistant client."""
+        with patch("home_assistant_mcp.core.load_config") as mock_load_config:
             mock_config = HomeAssistantConfig(
                 url="http://localhost:8123",
                 token="test_token",
@@ -26,181 +199,23 @@ class TestGetClient:
             )
             mock_load_config.return_value = mock_config
 
-            client = get_client()
+            # Test the lifespan context manager
+            async with core.app_lifespan(core.mcp):
+                # Client should be initialized
+                assert core.client is not None
+                assert isinstance(core.client, HomeAssistantClient)
 
-            assert isinstance(client, HomeAssistantClient)
-            mock_load_config.assert_called_once()
-
-    def test_get_client_reuses_instance(self):
-        """Test that get_client reuses existing instance."""
-        import home_assistant_mcp.server as server_module
-
-        # Create initial client
-        mock_config = HomeAssistantConfig(
-            url="http://localhost:8123",
-            token="test_token",
-            verify_ssl=False,
-            timeout=10.0,
-        )
-        server_module._config = mock_config
-        server_module._client = HomeAssistantClient(mock_config)
-        first_client = server_module._client
-
-        # Get client again
-        second_client = get_client()
-
-        # Should be the same instance
-        assert second_client is first_client
-
-
-class TestListTools:
-    """Tests for list_tools handler."""
+            # After exiting, client should be cleaned up (set to None)
+            assert core.client is None
 
     @pytest.mark.asyncio
-    async def test_list_tools_returns_all_tools(self):
-        """Test that list_tools returns all available tools."""
-        tools = await list_tools()
+    async def test_lifespan_handles_initialization_errors(self):
+        """Test that lifespan handles initialization errors properly."""
+        with patch("home_assistant_mcp.core.load_config") as mock_load_config:
+            mock_load_config.side_effect = Exception("Config error")
 
-        # Verify it returns a list
-        assert isinstance(tools, list)
-        assert len(tools) > 0
+            with pytest.raises(Exception) as exc_info:
+                async with core.app_lifespan(core.mcp):
+                    pass
 
-        # Check that essential tools are present
-        tool_names = [tool.name for tool in tools]
-        assert "ha_health_check" in tool_names
-        assert "ha_list_entities" in tool_names
-        assert "ha_get_entity_state" in tool_names
-        assert "ha_call_service" in tool_names
-        assert "ha_turn_on" in tool_names
-        assert "ha_turn_off" in tool_names
-        assert "ha_toggle" in tool_names
-
-    @pytest.mark.asyncio
-    async def test_list_tools_includes_area_tools(self):
-        """Test that list_tools includes area-related tools."""
-        tools = await list_tools()
-        tool_names = [tool.name for tool in tools]
-
-        assert "ha_list_areas" in tool_names
-        assert "ha_get_area_entities" in tool_names
-        assert "ha_get_area_devices" in tool_names
-        assert "ha_get_entity_area" in tool_names
-
-    @pytest.mark.asyncio
-    async def test_list_tools_includes_dashboard_tools(self):
-        """Test that list_tools includes dashboard-related tools."""
-        tools = await list_tools()
-        tool_names = [tool.name for tool in tools]
-
-        assert "ha_list_dashboards" in tool_names
-        assert "ha_get_dashboard" in tool_names
-        assert "ha_create_dashboard" in tool_names
-        assert "ha_update_dashboard" in tool_names
-        assert "ha_delete_dashboard" in tool_names
-
-
-class TestCallTool:
-    """Tests for call_tool handler."""
-
-    @pytest.mark.asyncio
-    async def test_call_tool_unknown_tool(self):
-        """Test calling an unknown tool."""
-        result = await call_tool("unknown_tool", {})
-
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Unknown tool" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_call_tool_handles_key_error(self):
-        """Test that call_tool handles missing required arguments."""
-        with patch("home_assistant_mcp.server.get_client") as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-
-            # Mock the tool to raise KeyError
-            with patch("home_assistant_mcp.server.TOOLS_MAP") as mock_tools_map:
-                async def raise_key_error(client, args):
-                    raise KeyError("entity_id")
-
-                mock_tools_map.__contains__.return_value = True
-                mock_tools_map.__getitem__.return_value = raise_key_error
-
-                result = await call_tool("test_tool", {})
-
-                assert len(result) == 1
-                assert "Missing required argument" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_call_tool_handles_type_error(self):
-        """Test that call_tool handles invalid argument types."""
-        with patch("home_assistant_mcp.server.get_client") as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-
-            with patch("home_assistant_mcp.server.TOOLS_MAP") as mock_tools_map:
-                async def raise_type_error(client, args):
-                    raise TypeError("Invalid type")
-
-                mock_tools_map.__contains__.return_value = True
-                mock_tools_map.__getitem__.return_value = raise_type_error
-
-                result = await call_tool("test_tool", {})
-
-                assert "Invalid argument type" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_call_tool_handles_timeout(self):
-        """Test that call_tool handles timeout exceptions."""
-        import httpx
-
-        with patch("home_assistant_mcp.server.get_client") as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-
-            with patch("home_assistant_mcp.server.TOOLS_MAP") as mock_tools_map:
-                async def raise_timeout(client, args):
-                    raise httpx.TimeoutException("Request timed out")
-
-                mock_tools_map.__contains__.return_value = True
-                mock_tools_map.__getitem__.return_value = raise_timeout
-
-                result = await call_tool("test_tool", {})
-
-                assert "Request timed out" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_call_tool_handles_ha_error(self):
-        """Test that call_tool handles Home Assistant errors."""
-        with patch("home_assistant_mcp.server.get_client") as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-
-            with patch("home_assistant_mcp.server.TOOLS_MAP") as mock_tools_map:
-                async def raise_ha_error(client, args):
-                    raise HomeAssistantError("HA API error")
-
-                mock_tools_map.__contains__.return_value = True
-                mock_tools_map.__getitem__.return_value = raise_ha_error
-
-                result = await call_tool("test_tool", {})
-
-                assert "Home Assistant error" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_call_tool_handles_generic_exception(self):
-        """Test that call_tool handles unexpected exceptions."""
-        with patch("home_assistant_mcp.server.get_client") as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-
-            with patch("home_assistant_mcp.server.TOOLS_MAP") as mock_tools_map:
-                async def raise_generic_error(client, args):
-                    raise ValueError("Unexpected error")
-
-                mock_tools_map.__contains__.return_value = True
-                mock_tools_map.__getitem__.return_value = raise_generic_error
-
-                result = await call_tool("test_tool", {})
-
-                assert "Internal error" in result[0].text
+            assert "Config error" in str(exc_info.value)

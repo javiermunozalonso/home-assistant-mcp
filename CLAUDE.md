@@ -289,22 +289,157 @@ pytest tests -m "integration or e2e"
 
 ## Architecture
 
+**⭐ See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete architecture documentation.**
+
+### Quick Overview
+
+This project follows a **modular, domain-driven architecture** using FastMCP:
+
+```
+src/home_assistant_mcp/
+├── core.py              # FastMCP instance, client, lifecycle management
+├── server.py            # Entry point, imports all tools
+├── client.py            # Home Assistant REST API client (httpx)
+├── config.py            # Configuration from environment variables
+├── models.py            # Pydantic models for API responses
+├── tool_models.py       # Pydantic models for tool inputs
+└── tools/               # MCP tools organized by domain (9 files, 22 tools)
+    ├── health.py        # Health checks and configuration (2 tools)
+    ├── entities.py      # Entity queries (2 tools)
+    ├── services.py      # Service operations (2 tools)
+    ├── control.py       # Device control (3 tools)
+    ├── history.py       # Historical data (1 tool)
+    ├── events.py        # Event firing (1 tool)
+    ├── areas.py         # Area management (4 tools)
+    ├── templates.py     # Template rendering (1 tool)
+    └── dashboards.py    # Dashboard CRUD (6 tools)
+```
+
 ### Core Components
 
-- **server.py** - MCP server implementation using `mcp.server.Server`. Defines tools via `@server.list_tools()` decorator and handles tool calls via `@server.call_tool()`. Uses a global `HomeAssistantClient` instance initialized lazily.
+- **core.py** - Central infrastructure: FastMCP server instance, Home Assistant client lifecycle, `get_client()` function. Separated to avoid circular imports between `server.py` and `tools/`.
 
-- **client.py** - Async HTTP client using `httpx.AsyncClient` to communicate with Home Assistant REST API. All API calls go through `_request()` method. Supports context manager protocol for proper cleanup. Uses Jinja2 templates via `/api/template` endpoint for area queries.
+- **server.py** - Entry point that imports all tools. Tools self-register via `@mcp.tool()` decorators. Contains `main()` function to run the server.
 
-- **config.py** - Pydantic-based configuration loaded from environment variables (`HA_URL`, `HA_TOKEN`, `HA_VERIFY_SSL`, `HA_TIMEOUT`). Uses `python-dotenv` for `.env` file support.
+- **client.py** - Async HTTP client using `httpx.AsyncClient` to communicate with Home Assistant REST API. All API calls go through `_request()` method. Supports context manager protocol. Uses Jinja2 templates via `/api/template` for area queries.
 
-- **models.py** - Pydantic models for API responses: `EntityState`, `ServiceDomain`, `ConfigEntry`, `ServiceCallResponse`, `HistoryEntry`.
+- **tool_models.py** - Pydantic v2 models for all tool inputs with automatic validation. Common base `ToolInputBase`, field validators, and `ResponseFormat` enum for JSON/Markdown outputs.
 
-### Key Patterns
+- **tools/** - Each file contains related tools grouped by domain. All tools follow consistent patterns: Pydantic input validation, dual JSON/Markdown output, error handling, logging.
 
-- The server uses stdio transport (`stdio_server`) for MCP communication
-- Entity operations (turn_on, turn_off, toggle) infer the domain from entity_id (e.g., `light.living_room` → domain `light`)
-- Area-related queries use Home Assistant's template rendering API with Jinja2 functions (`areas()`, `area_entities()`, `area_devices()`)
-- Tests use `pytest-httpx` for mocking HTTP responses and `pytest-asyncio` with `asyncio_mode = "auto"`
+### MCP Tool Organization Rules
+
+**CRITICAL**: When working with MCP tools, follow these organization rules:
+
+#### 1. **Group by Domain, Not by Operation**
+
+❌ **Wrong**: Group by operation type (all "list" tools, all "create" tools)
+✅ **Correct**: Group by domain (all entity tools, all dashboard tools)
+
+**Rationale**: Domain cohesion > operation similarity. Related functionality should live together.
+
+#### 2. **File Size Guidelines**
+
+- Target: 50-150 lines per file
+- If a file exceeds 200 lines, consider splitting by sub-domain
+- If a domain has only 1-2 tools, it can share a file with a related domain
+
+#### 3. **Adding New Tools**
+
+When adding a new tool, ask:
+
+1. **Does it fit an existing domain?** → Add to existing file
+2. **Is it a new domain with >2 tools?** → Create new file in `tools/`
+3. **Is it a single orphan tool?** → Add to most related existing file
+
+**Example**:
+- `ha_get_automations` → Add to `services.py` (service-related)
+- `ha_list_blueprints`, `ha_create_automation`, `ha_delete_automation` → Create `tools/automations.py`
+
+#### 4. **Updating `__init__.py` and `server.py`**
+
+Always update both when adding/removing tools:
+
+```python
+# tools/__init__.py
+from .new_file import ha_new_tool1, ha_new_tool2
+
+__all__ = [
+    # ... existing
+    "ha_new_tool1",
+    "ha_new_tool2",
+]
+```
+
+```python
+# server.py
+from .tools import (
+    # ... existing
+    ha_new_tool1,
+    ha_new_tool2,
+)
+```
+
+#### 5. **Tool Implementation Pattern**
+
+All tools MUST follow this pattern:
+
+```python
+"""Module docstring explaining the domain."""
+
+import logging
+from ..core import mcp, get_client
+from ..tool_models import MyToolInput, ResponseFormat
+
+logger = logging.getLogger(__name__)
+
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,  # Adjust based on tool behavior
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def ha_my_tool(params: MyToolInput) -> str:
+    """Brief description.
+
+    Extended description with context.
+
+    Examples:
+        - Basic: ha_my_tool(param="value")
+        - Advanced: ha_my_tool(param="value", option=True)
+
+    Args:
+        params: Input parameters
+
+    Returns:
+        str: Human-readable result
+    """
+    try:
+        client = get_client()
+        result = await client.operation(params.param)
+
+        # Support JSON/Markdown formats if returning data
+        if hasattr(params, 'response_format') and params.response_format == ResponseFormat.JSON:
+            return json.dumps(result, indent=2)
+        else:
+            return f"✓ Success: {result}"
+
+    except Exception as e:
+        logger.exception("Error in operation")
+        return f"✗ Error: {e}"
+```
+
+### Key Architectural Patterns
+
+- **FastMCP with Pydantic**: Automatic input validation, 75% less boilerplate code
+- **Lifecycle Management**: `@asynccontextmanager` pattern for client init/cleanup
+- **Dual Output Formats**: JSON (machine-readable) and Markdown (human-readable)
+- **Pagination Support**: Consistent `limit`/`offset` pattern with metadata
+- **Error Handling**: Consistent `✓`/`✗` prefixes, actionable error messages
+- **Logging**: Structured logging to stderr (stdout reserved for MCP protocol)
+- **Circular Import Prevention**: Core infrastructure in `core.py`, tools import from there
 
 ## Workflows
 
