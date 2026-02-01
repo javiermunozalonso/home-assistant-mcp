@@ -498,3 +498,5 @@ temp/
 .claude/skills/**/node_modules/
 .claude/skills/**/__pycache__/
 .claude/skills/**/*.pyc
+# Allow skill scripts (overrides [Ss]cripts pattern from VirtualEnv section)
+!.claude/skills/**/scripts/
