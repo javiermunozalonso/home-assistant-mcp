@@ -3,25 +3,16 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_update_dashboard import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.dashboards import ha_update_dashboard
+from home_assistant_mcp.tool_models import UpdateDashboardInput
 from home_assistant_mcp.models import Dashboard
 
 
 class TestUpdateDashboardTool:
     """Tests for ha_update_dashboard tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_update_dashboard"
-        assert "Update an existing dashboard" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert "dashboard_id" in TOOL_DEF.inputSchema["required"]
 
-        # Check optional properties
-        props = TOOL_DEF.inputSchema["properties"]
-        assert "title" in props
-        assert "icon" in props
-        assert "show_in_sidebar" in props
 
     @pytest.mark.asyncio
     async def test_execute_update_title(self):
@@ -37,22 +28,21 @@ class TestUpdateDashboardTool:
             require_admin=False,
         )
         mock_client.update_dashboard.return_value = mock_dashboard
+        core.client = mock_client
 
         # Execute tool
-        arguments = {
-            "dashboard_id": "test_dash",
-            "title": "New Title",
-        }
-        result = await execute(mock_client, arguments)
+        params = UpdateDashboardInput(
+            dashboard_id="test_dash",
+            title="New Title",
+        )
+        result = await ha_update_dashboard(params)
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Dashboard updated successfully" in result[0].text
-        assert "New Title" in result[0].text
+        assert "Dashboard updated successfully" in result
+        assert "New Title" in result
 
         mock_client.update_dashboard.assert_called_once_with(
-            "test_dash",
+            dashboard_id="test_dash",
             title="New Title",
         )
 
@@ -69,15 +59,16 @@ class TestUpdateDashboardTool:
             require_admin=False,
         )
         mock_client.update_dashboard.return_value = mock_dashboard
+        core.client = mock_client
 
-        arguments = {
-            "dashboard_id": "energy",
-            "icon": "mdi:flash",
-        }
-        result = await execute(mock_client, arguments)
+        params = UpdateDashboardInput(
+            dashboard_id="energy",
+            icon="mdi:flash",
+        )
+        await ha_update_dashboard(params)
 
         mock_client.update_dashboard.assert_called_once_with(
-            "energy",
+            dashboard_id="energy",
             icon="mdi:flash",
         )
 
@@ -94,15 +85,16 @@ class TestUpdateDashboardTool:
             require_admin=False,
         )
         mock_client.update_dashboard.return_value = mock_dashboard
+        core.client = mock_client
 
-        arguments = {
-            "dashboard_id": "hidden",
-            "show_in_sidebar": False,
-        }
-        result = await execute(mock_client, arguments)
+        params = UpdateDashboardInput(
+            dashboard_id="hidden",
+            show_in_sidebar=False,
+        )
+        await ha_update_dashboard(params)
 
         mock_client.update_dashboard.assert_called_once_with(
-            "hidden",
+            dashboard_id="hidden",
             show_in_sidebar=False,
         )
 
@@ -119,18 +111,19 @@ class TestUpdateDashboardTool:
             require_admin=False,
         )
         mock_client.update_dashboard.return_value = mock_dashboard
+        core.client = mock_client
 
-        arguments = {
-            "dashboard_id": "multi",
-            "title": "Updated Dashboard",
-            "icon": "mdi:update",
-            "show_in_sidebar": True,
-        }
-        result = await execute(mock_client, arguments)
+        params = UpdateDashboardInput(
+            dashboard_id="multi",
+            title="Updated Dashboard",
+            icon="mdi:update",
+            show_in_sidebar=True,
+        )
+        await ha_update_dashboard(params)
 
         # Verify all updates were passed (excluding dashboard_id)
         mock_client.update_dashboard.assert_called_once_with(
-            "multi",
+            dashboard_id="multi",
             title="Updated Dashboard",
             icon="mdi:update",
             show_in_sidebar=True,
@@ -149,15 +142,15 @@ class TestUpdateDashboardTool:
             require_admin=False,
         )
         mock_client.update_dashboard.return_value = mock_dashboard
+        core.client = mock_client
 
-        arguments = {
-            "dashboard_id": "test",
-            "title": "New Title",
-        }
-        result = await execute(mock_client, arguments)
+        params = UpdateDashboardInput(
+            dashboard_id="test",
+            title="New Title",
+        )
+        await ha_update_dashboard(params)
 
-        # Verify dashboard_id was used as first arg, not in kwargs
+        # Verify dashboard_id was used as kwarg
         call_args = mock_client.update_dashboard.call_args
-        assert call_args[0][0] == "test"
-        assert "dashboard_id" not in call_args[1]
+        assert call_args[1]["dashboard_id"] == "test"
         assert call_args[1]["title"] == "New Title"

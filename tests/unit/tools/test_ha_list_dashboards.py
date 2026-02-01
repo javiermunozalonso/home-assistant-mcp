@@ -4,19 +4,16 @@ import json
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_list_dashboards import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.dashboards import ha_list_dashboards
+from home_assistant_mcp.tool_models import ListDashboardsInput
 from home_assistant_mcp.models import Dashboard
 
 
 class TestListDashboardsTool:
     """Tests for ha_list_dashboards tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_list_dashboards"
-        assert "Lovelace dashboards" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert TOOL_DEF.inputSchema["required"] == []
+
 
     @pytest.mark.asyncio
     async def test_execute_success(self):
@@ -42,23 +39,19 @@ class TestListDashboardsTool:
             ),
         ]
         mock_client.list_dashboards.return_value = mock_dashboards
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {})
+        result = await ha_list_dashboards(ListDashboardsInput(response_format="json"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Found 2 dashboards" in result[0].text
-
-        # Verify JSON structure
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert len(json_data) == 2
-        assert json_data[0]["id"] == "lovelace"
-        assert json_data[0]["title"] == "Home"
-        assert json_data[0]["icon"] == "mdi:home"
-        assert json_data[1]["id"] == "energy"
+        json_data = json.loads(result)
+        dashboards = json_data["dashboards"]
+        assert len(dashboards) == 2
+        assert dashboards[0]["id"] == "lovelace"
+        assert dashboards[0]["title"] == "Home"
+        assert dashboards[0]["icon"] == "mdi:home"
+        assert dashboards[1]["id"] == "energy"
 
         mock_client.list_dashboards.assert_called_once()
 
@@ -67,10 +60,13 @@ class TestListDashboardsTool:
         """Test listing when no dashboards exist."""
         mock_client = AsyncMock()
         mock_client.list_dashboards.return_value = []
+        core.client = mock_client
 
-        result = await execute(mock_client, {})
-
-        assert "Found 0 dashboards" in result[0].text
+        result = await ha_list_dashboards(ListDashboardsInput(response_format="json"))
+        
+        json_data = json.loads(result)
+        dashboards = json_data["dashboards"]
+        assert len(dashboards) == 0
 
     @pytest.mark.asyncio
     async def test_execute_dashboard_with_admin_requirement(self):
@@ -87,13 +83,14 @@ class TestListDashboardsTool:
             ),
         ]
         mock_client.list_dashboards.return_value = mock_dashboards
+        core.client = mock_client
 
-        result = await execute(mock_client, {})
+        result = await ha_list_dashboards(ListDashboardsInput(response_format="json"))
 
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert json_data[0]["require_admin"] is True
-        assert json_data[0]["show_in_sidebar"] is False
+        json_data = json.loads(result)
+        dashboards = json_data["dashboards"]
+        assert dashboards[0]["require_admin"] is True
+        assert dashboards[0]["show_in_sidebar"] is False
 
     @pytest.mark.asyncio
     async def test_execute_includes_all_dashboard_fields(self):
@@ -110,12 +107,13 @@ class TestListDashboardsTool:
             ),
         ]
         mock_client.list_dashboards.return_value = mock_dashboards
+        core.client = mock_client
 
-        result = await execute(mock_client, {})
+        result = await ha_list_dashboards(ListDashboardsInput(response_format="json"))
 
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        dashboard = json_data[0]
+        json_data = json.loads(result)
+        dashboards = json_data["dashboards"]
+        dashboard = dashboards[0]
 
         # Verify all expected fields are present
         assert "id" in dashboard

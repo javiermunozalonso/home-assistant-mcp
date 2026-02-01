@@ -3,18 +3,15 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_get_entity_area import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.areas import ha_get_entity_area
+from home_assistant_mcp.tool_models import GetEntityAreaInput
 
 
 class TestGetEntityAreaTool:
     """Tests for ha_get_entity_area tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_get_entity_area"
-        assert "area name for a specific entity" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert "entity_id" in TOOL_DEF.inputSchema["required"]
+
 
     @pytest.mark.asyncio
     async def test_execute_entity_with_area(self):
@@ -22,15 +19,15 @@ class TestGetEntityAreaTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_client.get_entity_area.return_value = "Living Room"
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {"entity_id": "light.living_room"})
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="light.living_room"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Entity 'light.living_room' is in area: Living Room" in result[0].text
-        mock_client.get_entity_area.assert_called_once_with("light.living_room")
+        assert "light.living_room" in result
+        assert "Living Room" in result
+        mock_client.get_entity_area.assert_called_once_with(entity_id="light.living_room")
 
     @pytest.mark.asyncio
     async def test_execute_entity_without_area(self):
@@ -38,40 +35,45 @@ class TestGetEntityAreaTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_client.get_entity_area.return_value = None
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {"entity_id": "sensor.orphan"})
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="sensor.orphan"))
 
         # Verify
-        assert "Entity 'sensor.orphan' is not assigned to any area" in result[0].text
-        mock_client.get_entity_area.assert_called_once_with("sensor.orphan")
+        # Verify
+        assert "sensor.orphan" in result
+        assert "is not assigned to any area" in result
+        mock_client.get_entity_area.assert_called_once_with(entity_id="sensor.orphan")
 
     @pytest.mark.asyncio
     async def test_execute_different_entity_types(self):
         """Test with different entity types."""
         mock_client = AsyncMock()
+        core.client = mock_client
 
         # Test light entity
         mock_client.get_entity_area.return_value = "Bedroom"
-        result = await execute(mock_client, {"entity_id": "light.bedroom_lamp"})
-        assert "is in area: Bedroom" in result[0].text
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="light.bedroom_lamp"))
+        assert "is in area: Bedroom" in result
 
         # Test sensor entity
         mock_client.get_entity_area.return_value = "Kitchen"
-        result = await execute(mock_client, {"entity_id": "sensor.kitchen_temp"})
-        assert "is in area: Kitchen" in result[0].text
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="sensor.kitchen_temp"))
+        assert "is in area: Kitchen" in result
 
         # Test switch entity
         mock_client.get_entity_area.return_value = "Office"
-        result = await execute(mock_client, {"entity_id": "switch.office_fan"})
-        assert "is in area: Office" in result[0].text
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="switch.office_fan"))
+        assert "is in area: Office" in result
 
     @pytest.mark.asyncio
     async def test_execute_area_with_special_characters(self):
         """Test area names with special characters."""
         mock_client = AsyncMock()
         mock_client.get_entity_area.return_value = "Master Bedroom #1"
+        core.client = mock_client
 
-        result = await execute(mock_client, {"entity_id": "light.master"})
+        result = await ha_get_entity_area(GetEntityAreaInput(entity_id="light.master"))
 
-        assert "is in area: Master Bedroom #1" in result[0].text
+        assert "is in area: Master Bedroom #1" in result

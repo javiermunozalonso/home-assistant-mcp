@@ -1,25 +1,19 @@
 """Unit tests for ha_get_dashboard tool."""
 
+import json
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_get_dashboard import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.dashboards import ha_get_dashboard
+from home_assistant_mcp.tool_models import GetDashboardInput
 from home_assistant_mcp.models import DashboardConfig
 
 
 class TestGetDashboardTool:
     """Tests for ha_get_dashboard tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_get_dashboard"
-        assert "configuration of a specific dashboard" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert TOOL_DEF.inputSchema["required"] == []
 
-        # Check optional url_path parameter
-        props = TOOL_DEF.inputSchema["properties"]
-        assert "url_path" in props
 
     @pytest.mark.asyncio
     async def test_execute_default_dashboard(self):
@@ -39,15 +33,17 @@ class TestGetDashboardTool:
             ],
         )
         mock_client.get_dashboard_config.return_value = mock_config
+        core.client = mock_client
 
-        # Execute tool without url_path (default dashboard)
-        result = await execute(mock_client, {})
+        # Execute tool
+        result = await ha_get_dashboard(GetDashboardInput(response_format="json"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Home" in result[0].text
-        mock_client.get_dashboard_config.assert_called_once_with(None)
+        json_data = json.loads(result)
+        assert json_data["title"] == "Home"
+        assert json_data["title"] == "Home"
+        # assert "lovelace-default" in result # Not in mock data
+        mock_client.get_dashboard_config.assert_called_once_with(url_path=None)
 
     @pytest.mark.asyncio
     async def test_execute_specific_dashboard(self):
@@ -63,11 +59,17 @@ class TestGetDashboardTool:
             ],
         )
         mock_client.get_dashboard_config.return_value = mock_config
+        core.client = mock_client
 
-        result = await execute(mock_client, {"url_path": "energy"})
+        # Execute tool
+        result = await ha_get_dashboard(
+            GetDashboardInput(url_path="energy", response_format="json")
+        )
 
-        assert "Energy Dashboard" in result[0].text
-        mock_client.get_dashboard_config.assert_called_once_with("energy")
+        # Verify
+        json_data = json.loads(result)
+        assert json_data["title"] == "Energy Dashboard"
+        mock_client.get_dashboard_config.assert_called_once_with(url_path="energy")
 
     @pytest.mark.asyncio
     async def test_execute_dashboard_with_multiple_views(self):
@@ -82,10 +84,15 @@ class TestGetDashboardTool:
             ],
         )
         mock_client.get_dashboard_config.return_value = mock_config
+        core.client = mock_client
 
-        result = await execute(mock_client, {"url_path": "multi-view"})
+        result = await ha_get_dashboard(
+            GetDashboardInput(url_path="multi-view", response_format="json")
+        )
 
-        assert "Multi-View Dashboard" in result[0].text
+        json_data = json.loads(result)
+        assert json_data["title"] == "Multi-View Dashboard"
+        assert len(json_data["views"]) == 3
 
     @pytest.mark.asyncio
     async def test_execute_empty_dashboard(self):
@@ -96,7 +103,12 @@ class TestGetDashboardTool:
             views=[],
         )
         mock_client.get_dashboard_config.return_value = mock_config
+        core.client = mock_client
 
-        result = await execute(mock_client, {"url_path": "empty"})
+        result = await ha_get_dashboard(
+            GetDashboardInput(url_path="empty", response_format="json")
+        )
 
-        assert "Empty Dashboard" in result[0].text
+        json_data = json.loads(result)
+        assert json_data["title"] == "Empty Dashboard"
+        assert len(json_data["views"]) == 0

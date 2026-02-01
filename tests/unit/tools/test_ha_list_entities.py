@@ -4,20 +4,16 @@ import json
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_list_entities import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.entities import ha_list_entities
+from home_assistant_mcp.tool_models import ListEntitiesInput
 from home_assistant_mcp.models import EntityState
 
 
 class TestListEntitiesTool:
     """Tests for ha_list_entities tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_list_entities"
-        assert "List all entities" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert TOOL_DEF.inputSchema["required"] == []
-        assert "domain" in TOOL_DEF.inputSchema["properties"]
+
 
     @pytest.mark.asyncio
     async def test_execute_list_all_entities(self):
@@ -48,22 +44,19 @@ class TestListEntitiesTool:
             ),
         ]
         mock_client.get_states.return_value = mock_states
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {})
+        result = await ha_list_entities(ListEntitiesInput(response_format="json"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Found 3 entities" in result[0].text
-
         # Verify JSON structure
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert len(json_data) == 3
-        assert json_data[0]["entity_id"] == "light.living_room"
-        assert json_data[0]["state"] == "on"
-        assert json_data[0]["friendly_name"] == "Living Room Light"
+        json_data = json.loads(result)
+        entities = json_data["entities"]
+        assert len(entities) == 3
+        assert entities[0]["entity_id"] == "light.living_room"
+        assert entities[0]["state"] == "on"
+        assert entities[0]["friendly_name"] == "Living Room Light"
 
         mock_client.get_states.assert_called_once()
 
@@ -89,16 +82,17 @@ class TestListEntitiesTool:
             ),
         ]
         mock_client.get_entities_by_domain.return_value = mock_states
+        core.client = mock_client
 
         # Execute tool with domain filter
-        result = await execute(mock_client, {"domain": "light"})
+        result = await ha_list_entities(
+            ListEntitiesInput(domain="light", response_format="json")
+        )
 
         # Verify
-        assert "Found 2 entities" in result[0].text
-
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert all(e["entity_id"].startswith("light.") for e in json_data)
+        json_data = json.loads(result)
+        entities = json_data["entities"]
+        assert all(e["entity_id"].startswith("light.") for e in entities)
 
         mock_client.get_entities_by_domain.assert_called_once_with("light")
 
@@ -107,10 +101,13 @@ class TestListEntitiesTool:
         """Test listing entities when no entities exist."""
         mock_client = AsyncMock()
         mock_client.get_states.return_value = []
+        core.client = mock_client
 
-        result = await execute(mock_client, {})
+        result = await ha_list_entities(ListEntitiesInput(response_format="json"))
 
-        assert "Found 0 entities" in result[0].text
+        json_data = json.loads(result)
+        entities = json_data["entities"]
+        assert len(entities) == 0
 
     @pytest.mark.asyncio
     async def test_execute_entity_without_friendly_name(self):
@@ -126,10 +123,11 @@ class TestListEntitiesTool:
             ),
         ]
         mock_client.get_states.return_value = mock_states
+        core.client = mock_client
 
-        result = await execute(mock_client, {})
+        result = await ha_list_entities(ListEntitiesInput(response_format="json"))
 
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
+        json_data = json.loads(result)
+        entities = json_data["entities"]
         # Should use entity_id as fallback
-        assert json_data[0]["friendly_name"] == "sensor.test"
+        assert entities[0]["friendly_name"] == "sensor.test"

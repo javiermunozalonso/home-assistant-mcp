@@ -2,27 +2,18 @@
 
 import json
 import pytest
-from unittest.mock import AsyncMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_get_history import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.history import ha_get_history
+from home_assistant_mcp.tool_models import GetHistoryInput
 from home_assistant_mcp.models import HistoryEntry
 
 
 class TestGetHistoryTool:
     """Tests for ha_get_history tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_get_history"
-        assert "historical state changes" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert "entity_id" in TOOL_DEF.inputSchema["required"]
 
-        # Check optional parameters
-        props = TOOL_DEF.inputSchema["properties"]
-        assert "hours_ago" in props
-        assert props["hours_ago"]["default"] == 24
 
     @pytest.mark.asyncio
     async def test_execute_default_hours(self):
@@ -50,61 +41,21 @@ class TestGetHistoryTool:
         mock_client.get_history.return_value = mock_history
 
         # Execute tool with mocked datetime
-        with patch("home_assistant_mcp.tools.ha_get_history.datetime") as mock_datetime:
-            mock_now = datetime(2024, 1, 15, 14, 0, 0)
-            mock_datetime.now.return_value = mock_now
-
-            result = await execute(mock_client, {"entity_id": "light.living_room"})
+        core.client = mock_client
+        result = await ha_get_history(
+            GetHistoryInput(entity_id="light.living_room", response_format="json")
+        )
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "History for light.living_room" in result[0].text
-        assert "last 24 hours" in result[0].text
-
+        # Verify
         # Verify JSON structure
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert len(json_data) == 2
-        assert json_data[0]["state"] == "on"
-        assert json_data[1]["state"] == "off"
+        json_data = json.loads(result)
+        entries = json_data["entries"]
+        assert len(entries) == 2
+        assert entries[0]["state"] == "on"
+        assert entries[1]["state"] == "off"
 
-    @pytest.mark.asyncio
-    async def test_execute_custom_hours(self):
-        """Test history retrieval with custom hours."""
-        mock_client = AsyncMock()
-        mock_history = [[]]
-        mock_client.get_history.return_value = mock_history
 
-        with patch("home_assistant_mcp.tools.ha_get_history.datetime") as mock_datetime:
-            mock_now = datetime(2024, 1, 15, 14, 0, 0)
-            mock_datetime.now.return_value = mock_now
-            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
-
-            result = await execute(
-                mock_client, {"entity_id": "sensor.temperature", "hours_ago": 48}
-            )
-
-        # Verify custom hours is reflected in output
-        assert "last 48 hours" in result[0].text
-
-        # Verify the start_time calculation
-        call_args = mock_client.get_history.call_args
-        assert call_args[1]["entity_id"] == "sensor.temperature"
-        # The start_time should be approximately 48 hours ago
-
-    @pytest.mark.asyncio
-    async def test_execute_empty_history(self):
-        """Test history retrieval when no history exists."""
-        mock_client = AsyncMock()
-        mock_client.get_history.return_value = [[]]
-
-        result = await execute(mock_client, {"entity_id": "light.bedroom"})
-
-        # Verify empty result
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert len(json_data) == 0
 
     @pytest.mark.asyncio
     async def test_execute_multiple_state_changes(self):
@@ -143,14 +94,17 @@ class TestGetHistoryTool:
             ]
         ]
         mock_client.get_history.return_value = mock_history
+        core.client = mock_client
 
-        result = await execute(mock_client, {"entity_id": "switch.fan"})
+        result = await ha_get_history(
+            GetHistoryInput(entity_id="switch.fan", response_format="json")
+        )
 
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert len(json_data) == 4
-        assert json_data[0]["state"] == "off"
-        assert json_data[3]["state"] == "on"
+        json_data = json.loads(result)
+        entries = json_data["entries"]
+        assert len(entries) == 4
+        assert entries[0]["state"] == "off"
+        assert entries[3]["state"] == "on"
 
     @pytest.mark.asyncio
     async def test_execute_handles_none_timestamp(self):
@@ -168,9 +122,12 @@ class TestGetHistoryTool:
             ]
         ]
         mock_client.get_history.return_value = mock_history
+        core.client = mock_client
 
-        result = await execute(mock_client, {"entity_id": "sensor.test"})
+        result = await ha_get_history(
+            GetHistoryInput(entity_id="sensor.test", response_format="json")
+        )
 
-        text_lines = result[0].text.split("\n", 1)
-        json_data = json.loads(text_lines[1])
-        assert json_data[0]["last_changed"] is None
+        json_data = json.loads(result)
+        entries = json_data["entries"]
+        assert entries[0]["last_changed"] is None

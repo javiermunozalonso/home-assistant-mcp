@@ -3,19 +3,16 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_get_entity_state import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.entities import ha_get_entity_state
+from home_assistant_mcp.tool_models import GetEntityStateInput
 from home_assistant_mcp.models import EntityState
 
 
 class TestGetEntityStateTool:
     """Tests for ha_get_entity_state tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_get_entity_state"
-        assert "state and attributes" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert "entity_id" in TOOL_DEF.inputSchema["required"]
+
 
     @pytest.mark.asyncio
     async def test_execute_success(self):
@@ -34,15 +31,15 @@ class TestGetEntityStateTool:
             last_updated="2024-01-15T10:30:00+00:00",
         )
         mock_client.get_state.return_value = mock_state
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {"entity_id": "light.living_room"})
+        result = await ha_get_entity_state(GetEntityStateInput(entity_id="light.living_room"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "light.living_room" in result[0].text
-        assert "on" in result[0].text
+        # Verify
+        assert "light.living_room" in result
+        assert "on" in result
         mock_client.get_state.assert_called_once_with("light.living_room")
 
     @pytest.mark.asyncio
@@ -61,11 +58,12 @@ class TestGetEntityStateTool:
             last_updated="2024-01-15T10:30:00+00:00",
         )
         mock_client.get_state.return_value = mock_state
+        core.client = mock_client
 
-        result = await execute(mock_client, {"entity_id": "sensor.temperature"})
+        result = await ha_get_entity_state(GetEntityStateInput(entity_id="sensor.temperature"))
 
-        assert "sensor.temperature" in result[0].text
-        assert "22.5" in result[0].text
+        assert "sensor.temperature" in result
+        assert "22.5" in result
 
     @pytest.mark.asyncio
     async def test_execute_with_complex_attributes(self):
@@ -85,8 +83,9 @@ class TestGetEntityStateTool:
             last_updated="2024-01-15T10:30:00+00:00",
         )
         mock_client.get_state.return_value = mock_state
+        core.client = mock_client
 
-        result = await execute(mock_client, {"entity_id": "climate.living_room"})
+        result = await ha_get_entity_state(GetEntityStateInput(entity_id="climate.living_room"))
 
-        assert "climate.living_room" in result[0].text
-        assert "heat" in result[0].text
+        assert "climate.living_room" in result
+        assert "heat" in result

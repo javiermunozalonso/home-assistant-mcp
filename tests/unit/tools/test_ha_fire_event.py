@@ -3,23 +3,15 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from home_assistant_mcp.tools.ha_fire_event import TOOL_DEF, execute
+from home_assistant_mcp import core
+from home_assistant_mcp.tools.events import ha_fire_event
+from home_assistant_mcp.tool_models import FireEventInput
 
 
 class TestFireEventTool:
     """Tests for ha_fire_event tool."""
 
-    def test_tool_definition(self):
-        """Test tool definition is correctly structured."""
-        assert TOOL_DEF.name == "ha_fire_event"
-        assert "Fire a custom event" in TOOL_DEF.description
-        assert TOOL_DEF.inputSchema["type"] == "object"
-        assert "event_type" in TOOL_DEF.inputSchema["required"]
 
-        # Check properties
-        props = TOOL_DEF.inputSchema["properties"]
-        assert "event_type" in props
-        assert "event_data" in props
 
     @pytest.mark.asyncio
     async def test_execute_without_data(self):
@@ -27,15 +19,15 @@ class TestFireEventTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_client.fire_event.return_value = True
+        core.client = mock_client
 
         # Execute tool
-        result = await execute(mock_client, {"event_type": "test_event"})
+        result = await ha_fire_event(FireEventInput(event_type="test_event"))
 
         # Verify
-        assert len(result) == 1
-        assert result[0].type == "text"
-        assert "Event 'test_event' fired successfully" in result[0].text
-        mock_client.fire_event.assert_called_once_with("test_event", {})
+        # Verify
+        assert "Event 'test_event' fired successfully" in result
+        mock_client.fire_event.assert_called_once_with(event_type="test_event", event_data={})
 
     @pytest.mark.asyncio
     async def test_execute_with_data(self):
@@ -43,16 +35,18 @@ class TestFireEventTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_client.fire_event.return_value = True
+        core.client = mock_client
 
         # Execute tool with event data
         event_data = {"message": "Hello", "value": 42}
-        result = await execute(
-            mock_client, {"event_type": "custom_event", "event_data": event_data}
+        result = await ha_fire_event(
+            FireEventInput(event_type="custom_event", event_data=event_data)
         )
 
         # Verify
-        assert "Event 'custom_event' fired successfully" in result[0].text
-        mock_client.fire_event.assert_called_once_with("custom_event", event_data)
+        # Verify
+        assert "Event 'custom_event' fired successfully" in result
+        mock_client.fire_event.assert_called_once_with(event_type="custom_event", event_data=event_data)
 
     @pytest.mark.asyncio
     async def test_execute_with_complex_data(self):
@@ -60,6 +54,7 @@ class TestFireEventTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_client.fire_event.return_value = True
+        core.client = mock_client
 
         # Execute tool with complex data
         event_data = {
@@ -68,19 +63,20 @@ class TestFireEventTool:
             "details": {"button_id": 1, "duration": 500},
             "tags": ["automation", "test"],
         }
-        result = await execute(
-            mock_client, {"event_type": "button_event", "event_data": event_data}
+        result = await ha_fire_event(
+            FireEventInput(event_type="button_event", event_data=event_data)
         )
 
         # Verify complex data was passed
-        mock_client.fire_event.assert_called_once_with("button_event", event_data)
-        assert "button_event" in result[0].text
+        mock_client.fire_event.assert_called_once_with(event_type="button_event", event_data=event_data)
+        assert "button_event" in result
 
     @pytest.mark.asyncio
     async def test_execute_different_event_types(self):
         """Test firing different types of events."""
         mock_client = AsyncMock()
         mock_client.fire_event.return_value = True
+        core.client = mock_client
 
         # Test various event types
         event_types = [
@@ -91,5 +87,5 @@ class TestFireEventTool:
         ]
 
         for event_type in event_types:
-            result = await execute(mock_client, {"event_type": event_type})
-            assert f"Event '{event_type}' fired successfully" in result[0].text
+            result = await ha_fire_event(FireEventInput(event_type=event_type))
+            assert f"Event '{event_type}' fired successfully" in result
